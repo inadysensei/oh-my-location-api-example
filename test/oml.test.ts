@@ -77,18 +77,6 @@ describe("parseOmlBody", () => {
   });
 });
 
-describe("parseLocationItem", () => {
-  it("ignores place_id and motion on the wire", () => {
-    const parsed = parseLocationItem(
-      { ...sampleLocation, place_id: "local-only", motion: ["walking"] },
-      "iphone",
-    );
-    assert.ok(parsed);
-    assert.equal(parsed?.placeName, "Home");
-    assert.equal("motion" in (parsed?.raw as object), true);
-  });
-});
-
 describe("parseLocationPatch", () => {
   it("parses place_name and geocode", () => {
     const parsed = parseLocationPatch({

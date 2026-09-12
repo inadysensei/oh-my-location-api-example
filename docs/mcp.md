@@ -2,11 +2,9 @@
 
 Public URL is **`/mcp`**. Local example: `http://127.0.0.1:8080/mcp`.
 
-This is Streamable HTTP via [`@modelcontextprotocol/server`](https://www.npmjs.com/package/@modelcontextprotocol/server) (`createMcpHandler`). Fastify serves it at `src/mcp.ts` (not `/api/mcp`). It is an **optional read path** — the iOS app does not use it. Writes stay on `POST` / `PATCH /v1/locations`.
-
 ## Connect
 
-Same Bearer as ingest. `OML_BEARER_TOKEN`. `Authorization: Bearer <token>`. Missing or wrong → **401** (empty body). No OAuth.
+Same Bearer as ingest. `OML_BEARER_TOKEN`. `Authorization: Bearer <token>`.
 
 Cursor / Streamable HTTP clients:
 
@@ -25,12 +23,6 @@ Cursor / Streamable HTTP clients:
 
 Replace `<OML_BEARER_TOKEN>` with the same value as in `.env`. If the API is on another host, use that host instead of `127.0.0.1`.
 
-stdio-only clients can reach the same URL through [`mcp-remote`](https://www.npmjs.com/package/mcp-remote).
-
-## Tools
-
-Both tools are read-only. They never INSERT or UPDATE `oml_locations`. `raw_json` and `geocode_json` are not returned. `step_count` is included when present. There is no `motion` field.
-
 ### `get_locations`
 
 | Argument | Type | Required | Description |
@@ -38,24 +30,6 @@ Both tools are read-only. They never INSERT or UPDATE `oml_locations`. `raw_json
 | `from` | string | yes | Start of range. **Timezone-aware ISO 8601** |
 | `to` | string | yes | End of range. Same format |
 | `limit` | number | no | Max rows. Default **100**. Cap **1000** |
-
-The range is the `recorded_at` Instant **`[from, to]` (inclusive on both ends)**. `+09:00` and `Z` that name the same Instant match the same rows. This is not a lexical string compare and does not assume Asia/Tokyo.
-
-Order is `recorded_at` ascending (same Instant → `received_at`, then `id`). Use this to read what happened in time order.
-
-`from` / `to` examples:
-
-| OK | Why |
-| --- | --- |
-| `2026-09-12T00:00:00+09:00` | Offset present |
-| `2026-09-11T15:00:00Z` | UTC (same Instant as the row above) |
-| `2026-09-11T15:00:00.500Z` | Fractional seconds + timezone |
-
-| Rejected | Why |
-| --- | --- |
-| `2026-09-12T00:00:00` | Timezone-less local datetime |
-| `2026-09-12` | Date only |
-| `2026-09-12 00:00:00+09:00` | Not `T`-separated |
 
 The tool result is JSON text:
 
@@ -96,7 +70,7 @@ The tool result is JSON text:
 
 ### `get_latest_location`
 
-No arguments. Newest row by `recorded_at` Instant. Same Instant → `received_at`, then `id`. Empty store → `{"location":null}`.
+No arguments. Newest row by `recorded_at` Instant.
 
 ```json
 { "location": { "id": "...", "recorded_at": "...", "lat": 35.68, "lon": 139.76 } }

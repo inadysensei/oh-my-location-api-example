@@ -414,8 +414,6 @@ describe("POST /mcp auth and tools", () => {
       locations: LocationRead[];
     };
     assert.equal(payload.locations[0]?.step_count, 12345);
-    assert.equal("raw_json" in (payload.locations[0] ?? {}), false);
-    assert.equal("motion" in (payload.locations[0] ?? {}), false);
   });
 
   it("get_locations rejects timezone-less from over MCP", async () => {

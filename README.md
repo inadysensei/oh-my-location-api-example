@@ -118,7 +118,7 @@ Success: `{"ok":true}`. Unknown id: **404** `{"ok":false,"error":"not_found"}`. 
 
 ## MCP (optional, read-only)
 
-Agents can query stored points over Streamable HTTP at **`http://127.0.0.1:8080/mcp`**. There are no write tools. Auth is the same Bearer as ingest. Missing or wrong token → **401** (empty body).
+Agents can query stored points over Streamable HTTP at **`http://127.0.0.1:8080/mcp`**. There are no write tools. Auth is the same Bearer as ingest.
 
 ```json
 {
@@ -132,8 +132,6 @@ Agents can query stored points over Streamable HTTP at **`http://127.0.0.1:8080/
   }
 }
 ```
-
-`from` / `to` must be timezone-aware ISO 8601 (`2026-09-12T00:00:00+09:00` or `2026-09-11T15:00:00Z`). Timezone-less local datetimes are rejected. Tool tables and field lists: [`docs/mcp.md`](docs/mcp.md).
 
 ## Configuration
 
