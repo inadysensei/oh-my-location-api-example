@@ -1,0 +1,43 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-oml}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-oml}
+      POSTGRES_DB: ${POSTGRES_DB:-oml}
+    volumes:
+      - oml_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-oml} -d ${POSTGRES_DB:-oml}"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  api:
+    build: .
+    ports:
+      - "${OML_PORT:-8080}:8080"
+    environment:
+      PORT: "8080"
+      DATABASE_URL: postgres://${POSTGRES_USER:-oml}:${POSTGRES_PASSWORD:-oml}@db:5432/${POSTGRES_DB:-oml}
+      OML_BEARER_TOKEN: ${OML_BEARER_TOKEN:?Set OML_BEARER_TOKEN in .env (see .env.example)}
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:8080/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+    restart: unless-stopped
+
+volumes:
+  oml_pgdata:

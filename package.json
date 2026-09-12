@@ -1,0 +1,27 @@
+{
+  "name": "oh-my-location-api-example",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Sample self-hosted oml/1 ingest API for the Oh My Location iOS app (Docker + PostgreSQL).",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts",
+    "test": "tsx --test test/*.test.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "fastify": "^5.12.4",
+    "pg": "^8.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.2",
+    "@types/pg": "^8.23.1",
+    "tsx": "^4.23.13",
+    "typescript": "^7.0.2"
+  }
+}
