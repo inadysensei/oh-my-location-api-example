@@ -1,10 +1,13 @@
 import type { Pool } from "pg";
+import { DEFAULT_LOCATION_LIMIT, MAX_LOCATION_LIMIT } from "./iso-time.js";
 import {
   geocodeJson,
   type ParsedLocation,
   type ParsedLocationPatch,
   type ParsedPayload,
 } from "./oml.js";
+
+export { DEFAULT_LOCATION_LIMIT, MAX_LOCATION_LIMIT };
 
 const INSERT_SQL = `INSERT INTO oml_locations (
   id, recorded_at, recorded_at_ts, lat, lon, accuracy_m, altitude_m, course_deg,
@@ -300,9 +303,6 @@ export async function selectLocationById(
   return mapLocationRow(result.rows[0] as Record<string, unknown>);
 }
 
-export const DEFAULT_LOCATION_LIMIT = 100;
-export const MAX_LOCATION_LIMIT = 1000;
-
 export async function selectLatestLocations(
   pool: Pool,
   limit = DEFAULT_LOCATION_LIMIT,
@@ -316,6 +316,44 @@ export async function selectLatestLocations(
     [capped],
   );
   return result.rows.map((row) => mapLocationRow(row as Record<string, unknown>));
+}
+
+/**
+ * Locations whose `recorded_at` Instant is in `[fromMs, toMs]` (both ends inclusive).
+ * Comparison uses `recorded_at_ts` (timestamptz) so mixed offsets (`+09:00` vs `Z`)
+ * are compared as absolute time, not as lexical strings.
+ * Ordered by recorded_at ascending, then received_at, then id.
+ */
+export async function selectLocationsInRange(
+  pool: Pool,
+  fromMs: number,
+  toMs: number,
+  limit: number,
+): Promise<LocationRead[]> {
+  const result = await pool.query(
+    `SELECT ${LOCATION_READ_SQL}
+     FROM oml_locations
+     WHERE recorded_at_ts IS NOT NULL
+       AND recorded_at_ts >= $1::timestamptz
+       AND recorded_at_ts <= $2::timestamptz
+     ORDER BY recorded_at_ts ASC, received_at ASC, id ASC
+     LIMIT $3`,
+    [new Date(fromMs), new Date(toMs), limit],
+  );
+  return result.rows.map((row) => mapLocationRow(row as Record<string, unknown>));
+}
+
+/** Newest location by recorded_at Instant, then received_at, then id. */
+export async function selectLatestLocation(pool: Pool): Promise<LocationRead | null> {
+  const result = await pool.query(
+    `SELECT ${LOCATION_READ_SQL}
+     FROM oml_locations
+     WHERE recorded_at_ts IS NOT NULL
+     ORDER BY recorded_at_ts DESC, received_at DESC, id DESC
+     LIMIT 1`,
+  );
+  if (result.rowCount === 0) return null;
+  return mapLocationRow(result.rows[0] as Record<string, unknown>);
 }
 
 export async function pingDb(pool: Pool): Promise<boolean> {

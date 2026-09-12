@@ -6,6 +6,8 @@ This document is the full wire spec. You do not need the iOS app source to imple
 
 This example implements **`POST /v1/locations`** and **`PATCH /v1/locations/{id}`**. Extra routes such as `GET /health` are operational helpers; they are not part of `oml/1`.
 
+This example also exposes an optional read-only Streamable HTTP endpoint at **`/mcp`** (`get_locations`, `get_latest_location`). Agents can query stored points there; the iOS ingest contract does not use it. See [`docs/mcp.md`](docs/mcp.md).
+
 ## Auth
 
 Every ingest write uses the same header:
