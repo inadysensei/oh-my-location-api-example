@@ -2,23 +2,16 @@
 
 Sample **self-hosted ingest API** for the Oh My Location iOS app (`oml/1`).
 
-The iOS app already works **offline on the device**. This repository is optional: run it if you want a private log server that accepts the app's self-hosted POST URL.
-
-This repo is **self-contained**. The full HTTP contract lives in [`PROTOCOL.md`](PROTOCOL.md) (English). You do not need the iOS app source to run this stack or to understand the wire format.
+This repo is **self-contained**. The full HTTP contract lives in [`PROTOCOL.md`](PROTOCOL.md).
 
 It is a Docker-first example: **PostgreSQL** plus a small Node.js (Fastify) API.
-
-Field names are snake_case. This is not Overland / BetterTracks.
 
 ## Quick start
 
 ```bash
 cp .env.example .env
-# Edit .env and set OML_BEARER_TOKEN to a long random string.
 docker compose up --build
 ```
-
-The API listens on `http://127.0.0.1:8080` (override the host port with `OML_PORT`).
 
 Health check (no auth):
 
@@ -26,8 +19,6 @@ Health check (no auth):
 curl -sS http://127.0.0.1:8080/health
 # {"ok":true}
 ```
-
-Stop with `Ctrl+C`, or `docker compose down`. Data lives in the `oml_pgdata` volume (`docker compose down -v` deletes it).
 
 ## Point the iOS app at this server
 
@@ -44,10 +35,6 @@ http://<host>:8080/v1/locations
 
 Set the app **Access token** to the same value as `OML_BEARER_TOKEN` in `.env`. The app sends `Authorization: Bearer <token>`.
 
-The phone must be able to reach that host and port. HTTP on a private LAN is enough for this example. If you expose it beyond your network, put TLS in front of it (any reverse proxy you already use).
-
-If the POST URL is empty, the app does not send anywhere. Tracking still works locally.
-
 ## HTTP API (`oml/1`)
 
 The ingest contract (auth, bodies, fields, error codes) is defined in [`PROTOCOL.md`](PROTOCOL.md). Summary:
@@ -59,10 +46,6 @@ The ingest contract (auth, bodies, fields, error codes) is defined in [`PROTOCOL
 | `GET` | `/v1/locations` | Bearer | Optional: newest points (inspection; not part of `oml/1`). |
 | `GET` | `/v1/locations/{id}` | Bearer | Optional: one point (inspection; not part of `oml/1`). |
 | `GET` | `/health` | none | Docker / load-balancer health check. |
-
-Missing or wrong Bearer → **401** with an empty body.
-
-On the wire: **no `place_id`**, **no `motion`**. Optional `place_name`, `geocode`, and `step_count` are allowed (see the protocol).
 
 ### `POST /v1/locations`
 
@@ -106,13 +89,11 @@ Success:
 {"ok":true,"accepted":1}
 ```
 
-`accepted` is the number of valid unique points in the request. Resending the same `id` does not insert a second row; the response is still **200** so the app can drop the local queue.
-
-Typical **400** bodies: `{"ok":false,"error":"unsupported_schema"}`, `invalid_json`, `locations_required`, `empty_locations`, `invalid_locations`.
+`accepted` is the number of valid unique points in the request.
 
 ### `PATCH /v1/locations/{id}`
 
-`{id}` is the client-generated id from insert. Only `place_name` and `geocode` are applied. Omitted keys stay as they are; JSON `null` clears the field. `geocode` replaces the whole object (no partial merge). `lat` / `lon` / `recorded_at` in the body are ignored. There is no `place_id` and no `motion` on the wire. There is no `POST /v1/locations/update`.
+`{id}` is the client-generated id from insert. Only `place_name` and `geocode` are applied.
 
 ```bash
 curl -sS -D - \
@@ -144,8 +125,6 @@ Copy [`.env.example`](.env.example) to `.env`. Docker Compose reads it automatic
 | `OML_PORT` | Host port published by the `api` service (default `8080`). |
 | `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | Database credentials (defaults: `oml` / `oml` / `oml`). |
 
-The API process also accepts `DATABASE_URL` if you run the Node app without Compose.
-
 ## Schema
 
 On startup the API applies SQL in [`migrations/`](migrations/) in filename order (tracked in `schema_migrations`).
@@ -159,33 +138,21 @@ On startup the API applies SQL in [`migrations/`](migrations/) in filename order
 - optional labels: `place_name` and `geocode_*` / `geocode_json`
 - `raw_json` of the original point object
 
-The server does not reverse-geocode. It does not store `place_id` or `motion`.
-
 Inspect with:
 
 ```bash
 docker compose exec db psql -U oml -d oml
 ```
 
-## Local Node (without rebuilding the image)
+## Local Node 
 
-Useful while hacking on this example. You still need Postgres (Compose `db` is fine).
+Useful while hacking on this example.
 
 ```bash
 docker compose up db -d
 cp .env.example .env
-export $(grep -v '^#' .env | xargs)
-export DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:5432/${POSTGRES_DB}
 npm install
 npm test
 npm run typecheck
 npm run dev
 ```
-
-The `db` service does not publish `5432` by default; add a `ports` mapping if you want a host-side `DATABASE_URL`.
-
-## What this example is not
-
-- Not a map UI, friend sharing, or geofence engine
-- Not an MCP server
-- Not a hardening / public-internet appliance — treat it as a homelab starting point
