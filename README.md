@@ -43,6 +43,7 @@ The ingest contract (auth, bodies, fields, error codes) is defined in [`PROTOCOL
 | --- | --- | --- | --- |
 | `POST` | `/v1/locations` | Bearer | Insert points. Same `id` is ignored (`ON CONFLICT DO NOTHING`). |
 | `PATCH` | `/v1/locations/{id}` | Bearer | Update `place_name` / `geocode` only. |
+| Streamable HTTP | `/mcp` | Bearer | Optional read-only MCP (`get_locations`, `get_latest_location`). Not part of `oml/1`. See [`docs/mcp.md`](docs/mcp.md). |
 | `GET` | `/v1/locations` | Bearer | Optional: newest points (inspection; not part of `oml/1`). |
 | `GET` | `/v1/locations/{id}` | Bearer | Optional: one point (inspection; not part of `oml/1`). |
 | `GET` | `/health` | none | Docker / load-balancer health check. |
@@ -114,6 +115,23 @@ curl -sS -D - \
 ```
 
 Success: `{"ok":true}`. Unknown id: **404** `{"ok":false,"error":"not_found"}`. Bad body: **400** (`invalid_json` / `invalid_id` / `invalid_patch` / `no_updates` / `unsupported_schema`).
+
+## MCP (optional, read-only)
+
+Agents can query stored points over Streamable HTTP at **`http://127.0.0.1:8080/mcp`**. There are no write tools. Auth is the same Bearer as ingest.
+
+```json
+{
+  "mcpServers": {
+    "oh-my-location": {
+      "url": "http://127.0.0.1:8080/mcp",
+      "headers": {
+        "Authorization": "Bearer <OML_BEARER_TOKEN>"
+      }
+    }
+  }
+}
+```
 
 ## Configuration
 

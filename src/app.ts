@@ -8,6 +8,7 @@ import {
   selectLocationById,
   updateOmlLocationPlaceGeocode,
 } from "./db.js";
+import { createOmlMcpHttpHandler } from "./mcp.js";
 import { normalizeLocationId, parseLocationPatch, parseOmlBody } from "./oml.js";
 
 export type AppOptions = {
@@ -29,6 +30,43 @@ function requireBearer(request: FastifyRequest, reply: FastifyReply, env: Env): 
   return false;
 }
 
+function toWebRequest(request: FastifyRequest): Request {
+  const host = request.headers.host ?? "127.0.0.1";
+  const url = new URL(request.url, `http://${host}`);
+  const headers = new Headers();
+  for (const [key, value] of Object.entries(request.headers)) {
+    if (value === undefined) continue;
+    if (Array.isArray(value)) {
+      for (const item of value) headers.append(key, item);
+    } else {
+      headers.set(key, value);
+    }
+  }
+  const method = request.method.toUpperCase();
+  const body =
+    method === "GET" || method === "HEAD" || method === "DELETE"
+      ? undefined
+      : JSON.stringify(request.body ?? null);
+  return new Request(url, { method, headers, body });
+}
+
+async function sendWebResponse(reply: FastifyReply, response: Response) {
+  reply.code(response.status);
+  for (const [key, value] of response.headers.entries()) {
+    const lower = key.toLowerCase();
+    if (lower === "content-length" || lower === "transfer-encoding") continue;
+    reply.header(key, value);
+  }
+  if (!response.body) {
+    return reply.send();
+  }
+  const buf = Buffer.from(await response.arrayBuffer());
+  if (buf.length === 0) {
+    return reply.send();
+  }
+  return reply.send(buf);
+}
+
 export function buildApp(options: AppOptions): FastifyInstance {
   const env = options.env ?? process.env;
   const { pool } = options;
@@ -36,6 +74,10 @@ export function buildApp(options: AppOptions): FastifyInstance {
   const app = Fastify({
     logger: true,
     bodyLimit: 10 * 1024 * 1024,
+  });
+  const mcpHandler = createOmlMcpHttpHandler({ pool, env });
+  app.addHook("onClose", async () => {
+    await mcpHandler.close();
   });
 
   app.setErrorHandler((err, request, reply) => {
@@ -57,6 +99,7 @@ export function buildApp(options: AppOptions): FastifyInstance {
       name: "oh-my-location-api-example",
       schema: "oml/1",
       ingest: "/v1/locations",
+      mcp: "/mcp",
       health: "/health",
     });
   });
@@ -65,6 +108,17 @@ export function buildApp(options: AppOptions): FastifyInstance {
     const db = await pingDb(pool);
     if (!db) return json(reply, 503, { ok: false, error: "db_error" });
     return json(reply, 200, { ok: true });
+  });
+
+  app.route({
+    method: ["GET", "POST", "DELETE"],
+    url: "/mcp",
+    handler: async (request, reply) => {
+      const webRequest = toWebRequest(request);
+      const extra = request.method === "POST" ? { parsedBody: request.body } : undefined;
+      const response = await mcpHandler.fetch(webRequest, extra);
+      return sendWebResponse(reply, response);
+    },
   });
 
   app.route({

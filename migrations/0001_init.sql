@@ -1,5 +1,4 @@
 -- oml/1 location points. This is the only write table.
--- There is no place_id (client-only) and no motion column.
 
 CREATE TABLE IF NOT EXISTS oml_locations (
   id TEXT PRIMARY KEY NOT NULL,
