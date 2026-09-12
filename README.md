@@ -1,12 +1,14 @@
 # oh-my-location-api-example
 
-Sample **self-hosted ingest API** for the [Oh My Location](https://github.com/inadysensei/oh-my-location) iOS app (`oml/1`).
+Sample **self-hosted ingest API** for the Oh My Location iOS app (`oml/1`).
 
-The iOS app already works **offline on the device**. This repository is optional: run it if you want a private log server that accepts the same HTTP contract the app uses for a self-hosted POST URL.
+The iOS app already works **offline on the device**. This repository is optional: run it if you want a private log server that accepts the app's self-hosted POST URL.
 
-It is a Docker-first example: **PostgreSQL** plus a small Node.js (Fastify) API. It is independent of the hosted production API.
+This repo is **self-contained**. The full HTTP contract lives in [`PROTOCOL.md`](PROTOCOL.md) (English). You do not need the iOS app source to run this stack or to understand the wire format.
 
-Wire format: [PROTOCOL.md](https://github.com/inadysensei/oh-my-location/blob/main/PROTOCOL.md). Field names are snake_case. This is not Overland / BetterTracks.
+It is a Docker-first example: **PostgreSQL** plus a small Node.js (Fastify) API.
+
+Field names are snake_case. This is not Overland / BetterTracks.
 
 ## Quick start
 
@@ -48,15 +50,19 @@ If the POST URL is empty, the app does not send anywhere. Tracking still works l
 
 ## HTTP API (`oml/1`)
 
+The ingest contract (auth, bodies, fields, error codes) is defined in [`PROTOCOL.md`](PROTOCOL.md). Summary:
+
 | Method | Path | Auth | Purpose |
 | --- | --- | --- | --- |
 | `POST` | `/v1/locations` | Bearer | Insert points. Same `id` is ignored (`ON CONFLICT DO NOTHING`). |
 | `PATCH` | `/v1/locations/{id}` | Bearer | Update `place_name` / `geocode` only. |
-| `GET` | `/v1/locations` | Bearer | Optional: newest points (inspection). |
-| `GET` | `/v1/locations/{id}` | Bearer | Optional: one point. |
+| `GET` | `/v1/locations` | Bearer | Optional: newest points (inspection; not part of `oml/1`). |
+| `GET` | `/v1/locations/{id}` | Bearer | Optional: one point (inspection; not part of `oml/1`). |
 | `GET` | `/health` | none | Docker / load-balancer health check. |
 
 Missing or wrong Bearer → **401** with an empty body.
+
+On the wire: **no `place_id`**, **no `motion`**. Optional `place_name`, `geocode`, and `step_count` are allowed (see the protocol).
 
 ### `POST /v1/locations`
 
@@ -181,5 +187,5 @@ The `db` service does not publish `5432` by default; add a `ports` mapping if yo
 ## What this example is not
 
 - Not a map UI, friend sharing, or geofence engine
-- Not an MCP server (the hosted API has one; this sample does not)
+- Not an MCP server
 - Not a hardening / public-internet appliance — treat it as a homelab starting point

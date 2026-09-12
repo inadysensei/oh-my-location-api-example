@@ -1,3 +1,4 @@
+/** oml/1 ingest parsing. Wire contract: PROTOCOL.md in this repository. */
 export const OML_SCHEMA = "oml/1";
 
 export type ParsedGeocode = {
