@@ -2,6 +2,7 @@
   "name": "oh-my-location-api-example",
   "version": "1.0.0",
   "private": true,
+  "license": "MIT",
   "type": "module",
   "description": "Sample self-hosted oml/1 ingest API for the Oh My Location iOS app (Docker + PostgreSQL).",
   "scripts": {

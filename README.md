@@ -174,3 +174,7 @@ npm test
 npm run typecheck
 npm run dev
 ```
+
+## License
+
+Licensed under [MIT](LICENSE).
